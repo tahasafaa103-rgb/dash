@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Research Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#05070a;color:#f4f7fb;font-family:Arial,sans-serif}.wrap{width:min(1050px,94%);margin:auto;padding:28px 0 45px}.head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:22px}.title{font-size:25px;margin:0 0 6px;line-height:1.45}.sub{color:#8392a3;font-size:13px}.refresh{border:1px solid #1683ff;background:#1683ff;color:#fff;border-radius:11px;padding:10px 15px;cursor:pointer}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.card,.box{background:#0d1118;border:1px solid #1d2a38;border-radius:17px}.card{padding:18px}.label{font-size:12px;color:#8190a0}.value{font-size:26px;font-weight:700;color:#1683ff;margin-top:8px}.section{font-size:18px;margin:27px 0 11px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.box{padding:18px}.box h3{font-size:15px;margin:0 0 14px}.canvas{height:250px;position:relative}.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#101720;border-radius:13px;padding:14px}.stat b{display:block;font-size:21px;margin-top:5px;color:#1683ff}.muted{color:#8290a0;font-size:12px}.status{text-align:center;color:#8290a0;padding:35px}.foot{margin-top:18px;color:#657487;font-size:11px}@media(max-width:850px){.cards{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.head{align-items:flex-start}.title{font-size:20px}.cards{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.canvas{height:230px}}
+</style>
+</head>
+<body><div class="wrap">
+<header class="head"><div><h1 class="title">Association Between BMI and Mental Health Status Among Medical Students</h1><div class="sub">لوحة موجزة لإحصائيات المشاركين</div></div><button class="refresh" onclick="load()">تحديث</button></header>
+<div id="status" class="status">جاري تحميل البيانات...</div><main id="dash" style="display:none"></main>
+</div>
+<script>
+const API="https://script.google.com/macros/s/AKfycbyhqbpfc6etb9N7hJnXL4NRcIPBct8GgrJvg-Yn_XwaNg36OddnE9HzfON6wR53q9HaAw/exec?stats=1";
+let charts=[];
+function card(t,v){return `<div class="card"><div class="label">${t}</div><div class="value">${v}</div></div>`}
+function box(t,id){return `<div class="box"><h3>${t}</h3><div class="canvas"><canvas id="${id}"></canvas></div></div>`}
+function make(id,obj,type="doughnut"){let c=document.getElementById(id);if(!c)return;charts.push(new Chart(c,{type,data:{labels:Object.keys(obj),datasets:[{data:Object.values(obj),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#cbd5df",font:{size:11}}}},scales:type==="bar"?{x:{ticks:{color:"#9aa8b8"},grid:{color:"#18222d"}},y:{beginAtZero:true,ticks:{color:"#9aa8b8",precision:0},grid:{color:"#18222d"}}}:undefined}}))}
+function pct(obj,total){let n=Object.values(obj||{}).reduce((a,b)=>a+b,0);return total?Math.round(n/total*100)+"%":"0%"}
+async function load(){
+status.textContent="جاري تحميل البيانات...";
+try{
+let r=await fetch(API),d=await r.json();if(!d.total){status.textContent="لا توجد بيانات بعد.";return}
+dash.style.display="block";
+dash.innerHTML=`
+<section class="cards">
+${card("إجمالي المشاركين",d.total)}
+${card("نسبة الذكور",pct({"x":d.sex?.["ذكر"]||0},d.total))}
+${card("نسبة الإناث",pct({"x":d.sex?.["أنثى"]||0},d.total))}
+${card("متوسط العمر",d.averages.age+" سنة")}
+${card("متوسط BMI",d.averages.bmi)}
+</section>
+<h2 class="section">نظرة عامة على العينة</h2>
+<section class="grid">
+${box("توزيع الجنس","sex")}
+${box("توزيع فئات BMI","bmi")}
+</section>
+<h2 class="section">الصحة النفسية ونمط الحياة</h2>
+<section class="grid">
+${box("التقييم العام للصحة النفسية","mental")}
+${box("النشاط البدني","activity")}
+${box("ساعات النوم","sleep")}
+${box("استخدام النيكوتين","nicotine")}
+</section>
+<h2 class="section">ملخص سريع</h2>
+<section class="box"><div class="mini">
+<div class="stat"><span class="muted">نسبة من قيّموا صحتهم النفسية بأنها جيدة أو رائعة</span><b>${((d.mentalHealth?.["جيدة"]||0)+(d.mentalHealth?.["رائعة"]||0))/d.total*100|0}%</b></div>
+<div class="stat"><span class="muted">نسبة من يمارسون نشاطًا 3 مرات أسبوعيًا أو أكثر</span><b>${((d.physicalActivity?.["3 - 4 مرات في الأسبوع"]||0)+(d.physicalActivity?.["5 مرات أو أكثر في الأسبوع"]||0))/d.total*100|0}%</b></div>
+<div class="stat"><span class="muted">نسبة من ينامون 7 ساعات أو أكثر</span><b>${((d.sleep?.["من 7 إلى 8 ساعات"]||0)+(d.sleep?.["أكثر من 8 ساعات"]||0))/d.total*100|0}%</b></div>
+<div class="stat"><span class="muted">نسبة مستخدمي النيكوتين</span><b>${(d.nicotine?.["نعم"]||0)/d.total*100|0}%</b></div>
+</div></section>
+<div class="foot">آخر تحديث: ${new Date(d.updatedAt).toLocaleString("ar-IQ")}</div>`;
+charts.forEach(x=>x.destroy());charts=[];
+make("sex",d.sex);make("bmi",d.bmiCategory);make("mental",d.mentalHealth);make("activity",d.physicalActivity);make("sleep",d.sleep);make("nicotine",d.nicotine);
+status.textContent="";
+}catch(e){status.textContent="تعذر تحميل البيانات. تأكد من نشر أحدث إصدار من Apps Script."}
+}
+load();
+</script></body></html>
