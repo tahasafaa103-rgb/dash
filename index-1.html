@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Research Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#05070a;color:#f4f7fb;font-family:Arial,sans-serif}.wrap{width:min(1200px,94%);margin:auto;padding:28px 0 50px}.head{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}.title{font-size:28px;margin:0 0 7px}.sub{color:#8998a9;font-size:14px}.refresh{background:#1683ff;color:white;border:0;border-radius:12px;padding:11px 16px;cursor:pointer}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card,.chart{background:#0d1118;border:1px solid #1c2a39;border-radius:18px;padding:20px}.label{color:#8291a2;font-size:13px}.value{font-size:28px;font-weight:700;margin-top:9px;color:#1683ff}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:14px}.chart h3{font-size:17px;margin:0 0 18px}.canvasbox{height:280px;position:relative}.section{font-size:20px;margin:30px 0 12px}.status{text-align:center;color:#8291a2;padding:30px}.foot{color:#657487;font-size:12px;margin-top:20px}@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.head{align-items:flex-start}.title{font-size:22px}}@media(max-width:480px){.cards{grid-template-columns:1fr 1fr}.card{padding:16px}.value{font-size:23px}}
+</style>
+</head>
+<body><div class="wrap">
+<header class="head"><div><h1 class="title">Association Between BMI and Mental Health Status Among Medical Students</h1><div class="sub">لوحة إحصائيات المشاركين</div></div><button class="refresh" onclick="load()">تحديث</button></header>
+<div id="status" class="status">جاري تحميل الإحصائيات...</div><main id="dashboard" class="hidden"></main>
+</div>
+<script>
+const API="https://script.google.com/macros/s/AKfycbyhqbpfc6etb9N7hJnXL4NRcIPBct8GgrJvg-Yn_XwaNg36OddnE9HzfON6wR53q9HaAw/exec?stats=1";
+let charts=[];
+const labels={
+sex:["الجنس","sex"],ageDistribution:["العمر","ageDistribution"],bmiCategory:["تصنيف BMI","bmiCategory"],
+mentalHealth:["الصحة النفسية العامة","mentalHealth"],stressAnxiety:["التوتر والقلق","stressAnxiety"],
+sleep:["ساعات النوم","sleep"],physicalActivity:["النشاط البدني","physicalActivity"],diet:["النظام الغذائي","diet"],
+fastFood:["الوجبات السريعة والأغذية المصنعة","fastFood"],nicotine:["استخدام النيكوتين","nicotine"],
+stressInterference:["تأثير الضغط النفسي","stressInterference"],weightPerception:["وصف الوزن","weightPerception"],
+weightChange:["تغير الوزن خلال 6 أشهر","weightChange"],stressManagement:["التعامل مع الضغوط","stressManagement"],
+chronicDisease:["الأمراض المزمنة","chronicDisease"],medication:["الأدوية","medication"]
+};
+function esc(x){return String(x).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function makeChart(id,title,obj){const el=document.getElementById(id).getContext("2d");charts.push(new Chart(el,{type:"doughnut",data:{labels:Object.keys(obj),datasets:[{data:Object.values(obj)}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#cbd5df",font:{size:11}}}}}}))}
+function makeBar(id,title,obj){const el=document.getElementById(id).getContext("2d");charts.push(new Chart(el,{type:"bar",data:{labels:Object.keys(obj),datasets:[{label:"عدد المشاركين",data:Object.values(obj),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:"#9aa8b8"},grid:{color:"#18222d"}},y:{beginAtZero:true,ticks:{color:"#9aa8b8",precision:0},grid:{color:"#18222d"}}},plugins:{legend:{display:false}}}}))}
+function card(label,value){return `<div class="card"><div class="label">${label}</div><div class="value">${esc(value)}</div></div>`}
+function chart(title,key,type="doughnut"){return `<div class="chart"><h3>${title}</h3><div class="canvasbox"><canvas id="c_${key}"></canvas></div></div>`}
+async function load(){
+status.textContent="جاري تحميل الإحصائيات...";
+try{
+const r=await fetch(API);const d=await r.json();
+if(!d.total){status.textContent="لا توجد بيانات بعد.";return}
+dashboard.classList.remove("hidden");
+dashboard.innerHTML=`
+<section class="cards">
+${card("إجمالي المشاركين",d.total)}
+${card("متوسط العمر",d.averages.age+" سنة")}
+${card("متوسط BMI",d.averages.bmi)}
+${card("متوسط الوزن",d.averages.weight+" كغم")}
+</section>
+<h2 class="section">البيانات الديموغرافية وBMI</h2>
+<section class="grid">${chart("الجنس","sex")}${chart("العمر","ageDistribution","bar")}${chart("تصنيف BMI","bmiCategory")}${chart("تقييم الوزن الحالي","weightPerception","bar")}</section>
+<h2 class="section">الصحة النفسية</h2>
+<section class="grid">${chart("الصحة النفسية العامة","mentalHealth")}${chart("التوتر والقلق","stressAnxiety")}${chart("السيطرة على الانفعالات","emotionalControl")}${chart("الإحباط والحزن واليأس","frustration")}${chart("فقدان الرغبة أو المتعة","lossOfInterest")}${chart("التعامل مع الضغوط","stressManagement")}${chart("تأثير الضغط النفسي على الحياة اليومية","stressInterference")}</section>
+<h2 class="section">الأنماط الحياتية</h2>
+<section class="grid">${chart("ساعات النوم","sleep")}${chart("النشاط البدني","physicalActivity")}${chart("النظام الغذائي","diet")}${chart("الوجبات السريعة والأغذية المصنعة","fastFood")}${chart("النيكوتين","nicotine")}</section>
+<h2 class="section">الصحة العامة</h2>
+<section class="grid">${chart("تغير الوزن خلال 6 أشهر","weightChange")}${chart("الأمراض المزمنة","chronicDisease")}${chart("استخدام الأدوية","medication")}</section>
+<div class="foot">آخر تحديث: ${new Date(d.updatedAt).toLocaleString("ar-IQ")}</div>`;
+charts.forEach(c=>c.destroy());charts=[];
+makeChart("c_sex","",d.sex);makeBar("c_ageDistribution","",d.ageDistribution);makeChart("c_bmiCategory","",d.bmiCategory);makeBar("c_weightPerception","",d.weightPerception);
+makeChart("c_mentalHealth","",d.mentalHealth);makeChart("c_stressAnxiety","",d.stressAnxiety);makeChart("c_emotionalControl","",d.emotionalControl);makeChart("c_frustration","",d.frustration);makeChart("c_lossOfInterest","",d.lossOfInterest);makeChart("c_stressManagement","",d.stressManagement);makeChart("c_stressInterference","",d.stressInterference);
+makeChart("c_sleep","",d.sleep);makeChart("c_physicalActivity","",d.physicalActivity);makeChart("c_diet","",d.diet);makeChart("c_fastFood","",d.fastFood);makeChart("c_nicotine","",d.nicotine);
+makeChart("c_weightChange","",d.weightChange);makeChart("c_chronicDisease","",d.chronicDisease);makeChart("c_medication","",d.medication);
+status.textContent="";
+}catch(e){status.textContent="تعذر تحميل الإحصائيات. تأكد من نشر Apps Script كإصدار جديد.";console.error(e)}
+}
+load();
+</script></body></html>
